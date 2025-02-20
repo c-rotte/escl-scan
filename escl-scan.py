@@ -22,7 +22,8 @@ from lxml import etree
 from urllib.parse import urljoin
 
 DEF_NAME = "scan"
-SIZES = {"a4": (2480, 3508), "a5": (1748, 2480), "b5": (2079, 2953), "us": (2550, 3300)}  # approx. real widths and heights (in mm) times 11.81
+SIZES = {"a4": (2480, 3508), "a5": (1748, 2480), "b5": (2079, 2953),
+         "us": (2550, 3300)}  # approx. real widths and heights (in mm) times 11.81
 MAX_POLL = 50
 NS_SCAN = "http://schemas.hp.com/imaging/escl/2011/05/03"
 NS_PWG = "http://www.pwg.org/schemas/2010/12/sm"
@@ -39,7 +40,7 @@ SCAN_REQUEST = """
       <pwg:ContentRegionUnits>escl:ThreeHundredthsOfInches</pwg:ContentRegionUnits>
     </pwg:ScanRegion>
   </pwg:ScanRegions>
-  <pwg:InputSource>Platen</pwg:InputSource>
+  <pwg:InputSource>__SOURCE__</pwg:InputSource>
   <pwg:DocumentFormat>__FORMAT__</pwg:DocumentFormat>
   <scan:ColorMode>__COLORMODE__</scan:ColorMode>
   <scan:XResolution>__RESOLUTION__</scan:XResolution>
@@ -172,6 +173,7 @@ def main(args):
         "__NS_SCAN__", NS_SCAN).replace(
         "__NS_PWG__", NS_PWG).replace(
         "__VERSION__", version).replace(
+        "__SOURCE__", args.print_source).replace(
         "__FORMAT__", format).replace(
         "__COLORMODE__", colorMode).replace(
         "__RESOLUTION__", resolution).replace(
@@ -183,7 +185,8 @@ def main(args):
         log.debug("Sending scan request: %s", startUrl)
     resp = http.post(startUrl, startReq, headers={"Content-Type": "text/xml"})
     resp.raise_for_status()
-    resultUrl = urljoin(resp.headers["Location"] + "/", "NextDocument")  # status code is 201 so Requests won't follow Location
+    resultUrl = urljoin(resp.headers["Location"] + "/",
+                        "NextDocument")  # status code is 201 so Requests won't follow Location
     log.debug("Result is at %s", resultUrl)
 
     # poll for the result every two seconds, give up after 10 failures
@@ -197,7 +200,8 @@ def main(args):
             break
         counter += 1
         if counter > MAX_POLL:
-            error("Giving up after %d attempts to load result, try it manually later: curl -s %s > %s" % (MAX_POLL, resultUrl, filename))
+            error("Giving up after %d attempts to load result, try it manually later: curl -s %s > %s" % (
+            MAX_POLL, resultUrl, filename))
 
     # write result
     log.debug("Writing: %s", filename)
@@ -224,10 +228,16 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="A little Python3 script for scanning via the eSCL protocol")
     ap.add_argument("-i", "--info", action="store_true", help="show scanner information and exit")
     ap.add_argument("-o", "--out", default="", help="output file name [default: " + DEF_NAME + "_<datetime>.<type>]")
-    ap.add_argument("-t", "--type", default="jpg", help="desired resulting file type [default: %(default)s]", choices=["jpg", "pdf"])
-    ap.add_argument("-r", "--resolution", default="", help="a single value for both X and Y resolution [default: max. available]")
-    ap.add_argument("-c", "--color-mode", default="r24", help="RGB24 (r24) or Grayscale8 (g8) [default: %(default)s]", choices=["r24", "g8"])
-    ap.add_argument("-s", "--size", default="max", help="size of scanned paper [default: %(default)s]", choices=["a4", "a5", "b5", "us", "max"])
+    ap.add_argument("-t", "--type", default="jpg", help="desired resulting file type [default: %(default)s]",
+                    choices=["jpg", "pdf"])
+    ap.add_argument("-r", "--resolution", default="",
+                    help="a single value for both X and Y resolution [default: max. available]")
+    ap.add_argument("-c", "--color-mode", default="r24", help="RGB24 (r24) or Grayscale8 (g8) [default: %(default)s]",
+                    choices=["r24", "g8"])
+    ap.add_argument("-s", "--size", default="max", help="size of scanned paper [default: %(default)s]",
+                    choices=["a4", "a5", "b5", "us", "max"])
+    ap.add_argument("-p", "--print-source", default="Feeder", help="source of scan [default: %(default)s]",
+                    choices=["Platten", "Feeder"])
     ap.add_argument("-v", "--verbose", action="store_true", help="Show debug output")
     ap.add_argument("-V", "--very-verbose", action="store_true", help="Show debug output and all data")
     ap.add_argument("url", help="URL of the scanner, incl. scheme and (if necessary) port")
